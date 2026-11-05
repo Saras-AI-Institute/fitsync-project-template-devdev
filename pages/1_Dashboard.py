@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from modules.processor import process_data
 from modules.theme import init_theme, render_theme_toggle, apply_custom_css, style_plotly_chart, get_current_theme
 
@@ -110,48 +111,55 @@ chart_col1, chart_col2 = st.columns(2)
 with chart_col1:
     st.subheader("📈 Recovery Score & Sleep Duration Trend")
     
-    # Dual-axis line chart
-    fig_trend = go.Figure()
+    # Dual-axis line chart using standard subplots
+    fig_trend = make_subplots(specs=[[{"secondary_y": True}]])
 
     # Recovery Score Trace
-    fig_trend.add_trace(go.Scatter(
-        x=df['Date'],
-        y=df['Recovery_Score'],
-        name="Recovery Score",
-        mode='lines+markers',
-        line=dict(color=theme['primary'], width=2.5),
-        marker=dict(size=5),
-        yaxis="y1"
-    ))
+    fig_trend.add_trace(
+        go.Scatter(
+            x=df['Date'],
+            y=df['Recovery_Score'],
+            name="Recovery Score",
+            mode='lines+markers',
+            line=dict(color=theme['primary'], width=2.5),
+            marker=dict(size=5)
+        ),
+        secondary_y=False
+    )
 
     # Sleep Hours Trace
-    fig_trend.add_trace(go.Scatter(
-        x=df['Date'],
-        y=df['Sleep_Hours'],
-        name="Sleep Hours",
-        mode='lines+markers',
-        line=dict(color=theme['secondary'], width=2, dash='dot'),
-        marker=dict(size=4),
-        yaxis="y2"
-    ))
+    fig_trend.add_trace(
+        go.Scatter(
+            x=df['Date'],
+            y=df['Sleep_Hours'],
+            name="Sleep Hours",
+            mode='lines+markers',
+            line=dict(color=theme['secondary'], width=2, dash='dot'),
+            marker=dict(size=4)
+        ),
+        secondary_y=True
+    )
 
     fig_trend.update_layout(
-        yaxis=dict(
-            title="Recovery Score (0-100)",
-            range=[0, 105],
-            titlefont=dict(color=theme['primary']),
-            tickfont=dict(color=theme['primary'])
-        ),
-        yaxis2=dict(
-            title="Sleep Hours (hrs)",
-            overlaying="y",
-            side="right",
-            range=[3, 11],
-            titlefont=dict(color=theme['secondary']),
-            tickfont=dict(color=theme['secondary'])
-        ),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
+
+    fig_trend.update_yaxes(
+        title_text="Recovery Score (0-100)",
+        range=[0, 105],
+        title_font=dict(color=theme['primary']),
+        tickfont=dict(color=theme['primary']),
+        secondary_y=False
+    )
+
+    fig_trend.update_yaxes(
+        title_text="Sleep Hours (hrs)",
+        range=[3, 11],
+        title_font=dict(color=theme['secondary']),
+        tickfont=dict(color=theme['secondary']),
+        secondary_y=True
+    )
+
     style_plotly_chart(fig_trend)
     st.plotly_chart(fig_trend, use_container_width=True)
 
