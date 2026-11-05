@@ -5,29 +5,29 @@ THEME_PALETTES = {
         "bg": "#0E1117",
         "card_bg": "#161B22",
         "card_border": "#30363D",
-        "text": "#E6EDF3",
+        "text": "#F0F6FC",
         "text_muted": "#8B949E",
         "primary": "#00C9A7",
         "primary_gradient": "linear-gradient(135deg, #00C9A7 0%, #008080 100%)",
-        "secondary": "#845EC2",
+        "secondary": "#A27BFF",
         "grid": "#21262D",
         "paper_bg": "#161B22",
         "plot_bg": "#161B22",
         "hover_bg": "#1F242D"
     },
     "light": {
-        "bg": "#F8F9FA",
-        "card_bg": "#FFFFFF",
-        "card_border": "#E5E7EB",
-        "text": "#1F2937",
-        "text_muted": "#6B7280",
-        "primary": "#007ACC",
-        "primary_gradient": "linear-gradient(135deg, #007ACC 0%, #005F9E 100%)",
-        "secondary": "#FF6F61",
+        "bg": "#F3F4F6",             # Soft neutral grey (comfortable, not blinding)
+        "card_bg": "#FFFFFF",        # Crisp card container
+        "card_border": "#D1D5DB",    # Clear visible borders
+        "text": "#111827",           # Deep dark text for maximum contrast & readability
+        "text_muted": "#4B5563",     # Clear secondary grey
+        "primary": "#00897B",        # Deep high-contrast teal
+        "primary_gradient": "linear-gradient(135deg, #00897B 0%, #005B52 100%)",
+        "secondary": "#6D28D9",      # Deep purple
         "grid": "#E5E7EB",
         "paper_bg": "#FFFFFF",
-        "plot_bg": "#FFFFFF",
-        "hover_bg": "#F3F4F6"
+        "plot_bg": "#F9FAFB",
+        "hover_bg": "#E5E7EB"
     }
 }
 
@@ -47,7 +47,7 @@ def get_current_theme():
 
 def render_theme_toggle():
     """
-    Renders a minimalist theme toggle button in the sidebar.
+    Renders a clean theme toggle button in the sidebar.
     Persists selection in st.session_state['theme'].
     """
     init_theme()
@@ -63,23 +63,51 @@ def render_theme_toggle():
 def apply_custom_css():
     """
     Injects custom CSS styling matching the active theme into the current page.
+    Forces high-contrast typography and visible borders in both light & dark modes.
     """
     theme = get_current_theme()
     is_dark = st.session_state.get("theme", "dark") == "dark"
 
     css = f"""
     <style>
+        /* Force CSS variables so Streamlit internals match active mode */
+        :root {{
+            --text-color: {theme['text']} !important;
+            --background-color: {theme['bg']} !important;
+            --secondary-background-color: {theme['card_bg']} !important;
+        }}
+
         /* Base page background and typography */
         .stApp {{
-            background-color: {theme['bg']};
-            color: {theme['text']};
+            background-color: {theme['bg']} !important;
+            color: {theme['text']} !important;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }}
 
-        /* Sidebar background */
+        /* Headings & markdown text */
+        h1, h2, h3, h4, h5, h6 {{
+            color: {theme['text']} !important;
+            font-weight: 700 !important;
+        }}
+
+        p, span, label, li, [data-testid="stMarkdownContainer"] p {{
+            color: {theme['text']} !important;
+        }}
+
+        /* Sidebar background & navigation */
         section[data-testid="stSidebar"] {{
-            background-color: {theme['card_bg']};
-            border-right: 1px solid {theme['card_border']};
+            background-color: {theme['card_bg']} !important;
+            border-right: 1px solid {theme['card_border']} !important;
+        }}
+
+        section[data-testid="stSidebar"] h1,
+        section[data-testid="stSidebar"] h2,
+        section[data-testid="stSidebar"] h3,
+        section[data-testid="stSidebar"] p,
+        section[data-testid="stSidebar"] span,
+        section[data-testid="stSidebar"] label,
+        section[data-testid="stSidebarNav"] span {{
+            color: {theme['text']} !important;
         }}
 
         /* Hero banner container */
@@ -89,20 +117,20 @@ def apply_custom_css():
             border-radius: 14px;
             padding: 32px 28px;
             margin-bottom: 24px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, {"0.3" if is_dark else "0.06"});
+            box-shadow: 0 4px 12px rgba(0, 0, 0, {"0.35" if is_dark else "0.08"});
         }}
 
         .hero-badge {{
             display: inline-block;
-            background: rgba(0, 201, 167, 0.15);
+            background: rgba(0, 201, 167, {"0.15" if is_dark else "0.12"});
             color: {theme['primary']};
             padding: 4px 12px;
             border-radius: 9999px;
             font-size: 0.82rem;
-            font-weight: 600;
+            font-weight: 700;
             letter-spacing: 0.5px;
             margin-bottom: 12px;
-            border: 1px solid rgba(0, 201, 167, 0.3);
+            border: 1px solid {theme['primary']};
         }}
 
         .hero-title {{
@@ -110,12 +138,12 @@ def apply_custom_css():
             font-weight: 800;
             margin: 0 0 10px 0;
             line-height: 1.2;
-            color: {theme['text']};
+            color: {theme['text']} !important;
         }}
 
         .hero-subtitle {{
             font-size: 1.05rem;
-            color: {theme['text_muted']};
+            color: {theme['text_muted']} !important;
             line-height: 1.6;
             margin: 0;
             max-width: 850px;
@@ -128,7 +156,7 @@ def apply_custom_css():
             border-radius: 12px;
             padding: 20px;
             height: 100%;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, {"0.2" if is_dark else "0.04"});
+            box-shadow: 0 2px 8px rgba(0, 0, 0, {"0.25" if is_dark else "0.06"});
             transition: transform 0.15s ease, border-color 0.15s ease;
         }}
 
@@ -146,13 +174,13 @@ def apply_custom_css():
         .card-title {{
             font-size: 1.15rem;
             font-weight: 700;
-            color: {theme['text']};
+            color: {theme['text']} !important;
             margin: 0 0 8px 0;
         }}
 
         .card-body {{
             font-size: 0.92rem;
-            color: {theme['text_muted']};
+            color: {theme['text_muted']} !important;
             line-height: 1.5;
             margin: 0;
         }}
@@ -162,16 +190,17 @@ def apply_custom_css():
             background: {theme['card_bg']};
             border: 1px solid {theme['card_border']};
             border-radius: 12px;
-            padding: 16px 20px;
+            padding: 18px 20px;
             text-align: left;
             margin-bottom: 16px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, {"0.2" if is_dark else "0.05"});
         }}
 
         .kpi-label {{
             font-size: 0.82rem;
             text-transform: uppercase;
             letter-spacing: 0.6px;
-            color: {theme['text_muted']};
+            color: {theme['text_muted']} !important;
             margin-bottom: 4px;
             font-weight: 600;
         }}
@@ -179,13 +208,13 @@ def apply_custom_css():
         .kpi-value {{
             font-size: 1.85rem;
             font-weight: 800;
-            color: {theme['primary']};
+            color: {theme['primary']} !important;
             line-height: 1.1;
         }}
 
         .kpi-subtitle {{
             font-size: 0.8rem;
-            color: {theme['text_muted']};
+            color: {theme['text_muted']} !important;
             margin-top: 4px;
         }}
 
@@ -197,17 +226,56 @@ def apply_custom_css():
             width: 28px;
             height: 28px;
             background: {theme['primary']};
-            color: #0E1117;
+            color: #FFFFFF !important;
             font-weight: 700;
             border-radius: 50%;
             margin-right: 8px;
             font-size: 0.9rem;
         }}
 
-        /* Clean Streamlit elements */
-        div[data-testid="stMetricValue"] {{
+        /* Streamlit Native Metric elements */
+        div[data-testid="stMetricLabel"] * {{
+            color: {theme['text_muted']} !important;
+        }}
+
+        div[data-testid="stMetricValue"] * {{
             font-size: 1.85rem !important;
-            font-weight: 700 !important;
+            font-weight: 800 !important;
+            color: {theme['primary']} !important;
+        }}
+
+        /* Selectboxes & Dropdowns */
+        div[data-baseweb="select"] > div {{
+            background-color: {theme['card_bg']} !important;
+            border: 1px solid {theme['card_border']} !important;
+        }}
+
+        div[data-baseweb="select"] * {{
+            color: {theme['text']} !important;
+        }}
+
+        /* Expanders */
+        div[data-testid="stExpander"] {{
+            background-color: {theme['card_bg']} !important;
+            border: 1px solid {theme['card_border']} !important;
+            border-radius: 8px;
+        }}
+
+        div[data-testid="stExpander"] summary span {{
+            color: {theme['text']} !important;
+            font-weight: 600 !important;
+        }}
+
+        /* Buttons */
+        div[data-testid="stButton"] > button {{
+            background-color: {theme['card_bg']} !important;
+            border: 1px solid {theme['card_border']} !important;
+            color: {theme['text']} !important;
+            font-weight: 600;
+        }}
+
+        div[data-testid="stButton"] > button:hover {{
+            border-color: {theme['primary']} !important;
             color: {theme['primary']} !important;
         }}
     </style>
@@ -253,13 +321,13 @@ def style_plotly_chart(fig):
         gridcolor=theme["grid"],
         zerolinecolor=theme["grid"],
         linecolor=theme["card_border"],
-        tickfont=dict(color=theme["text_muted"])
+        tickfont=dict(color=theme["text"])
     )
     fig.update_yaxes(
         gridcolor=theme["grid"],
         zerolinecolor=theme["grid"],
         linecolor=theme["card_border"],
-        tickfont=dict(color=theme["text_muted"])
+        tickfont=dict(color=theme["text"])
     )
 
     return fig
