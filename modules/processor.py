@@ -1,61 +1,100 @@
+import os
 import pandas as pd
 from datetime import datetime
 
-def load_data():
+def get_default_data_path():
+    """
+    Resolve the default path to data/health_data.csv reliably,
+    whether run from repository root or a subfolder.
+    """
+    candidates = [
+        os.path.join("data", "health_data.csv"),
+        os.path.join(os.path.dirname(__file__), "..", "data", "health_data.csv"),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "health_data.csv"))
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    return "data/health_data.csv"
+
+def load_data(file_path=None):
     """
     Load and clean the health data from CSV file.
-    This function handles missing values intelligently and converts date strings into datetime objects.
-    It returns a cleaned pandas DataFrame.
+    Handles missing values using statistical and domain defaults:
+      - Steps: median
+      - Sleep_Hours: fixed value of 7.0
+      - Heart_Rate_bpm: fixed value of 68.0
+      - Calories_Burned: median
+      - Active_Minutes: median
+    Converts 'Date' column to datetime objects and sorts chronologically.
+    Returns a cleaned pandas DataFrame.
     """
-    # Step 1: Load the CSV file into a pandas DataFrame
-    file_path = 'data/health_data.csv'
+    if file_path is None:
+        file_path = get_default_data_path()
+
     data = pd.read_csv(file_path)
 
-    # Step 2: Fill missing 'Steps' values with the median
-    data['Steps'].fillna(data['Steps'].median(), inplace=True)
+    # Clean missing values without deprecated inplace assignments
+    if 'Steps' in data.columns:
+        data['Steps'] = data['Steps'].fillna(data['Steps'].median())
 
-    # Step 3: Fill missing 'Sleep_Hours' values with a fixed value of 7
-    data['Sleep_Hours'].fillna(7, inplace=True)
+    if 'Sleep_Hours' in data.columns:
+        data['Sleep_Hours'] = data['Sleep_Hours'].fillna(7.0)
 
-    # Step 4: Fill missing 'Heart_Rate_bpm' values with a fixed value of 68
-    data['Heart_Rate_bpm'].fillna(68, inplace=True)
+    if 'Heart_Rate_bpm' in data.columns:
+        data['Heart_Rate_bpm'] = data['Heart_Rate_bpm'].fillna(68.0)
 
-    # Step 5: Fill missing values in other columns with their respective medians
-    for column in ['Calories_Burned', 'Active_Minutes']:
-        data[column].fillna(data[column].median(), inplace=True)
+    for col in ['Calories_Burned', 'Active_Minutes']:
+        if col in data.columns:
+            data[col] = data[col].fillna(data[col].median())
 
-    # Step 6: Convert 'Date' column to datetime objects
-    data['Date'] = pd.to_datetime(data['Date'], format='%Y-%m-%d')
+    # Convert Date column to datetime
+    if 'Date' in data.columns:
+        data['Date'] = pd.to_datetime(data['Date'], format='%Y-%m-%d')
+        data = data.sort_values('Date').reset_index(drop=True)
 
     return data
 
 def calculate_recovery_score(df):
     """
-    Calculate and add a 'Recovery_Score' (0 to 100) to the DataFrame.
-    This score represents how well the person’s body has recovered based on sleep, heart rate, and activity levels.
-    The logic for scoring is simple and considers healthy ranges for each factor.
+    Calculate and append a 'Recovery_Score' (clamped between 0 and 100) to the DataFrame.
+    
+    Recovery Logic:
+      - Starting baseline: 50
+      - Sleep >= 7 hrs: +20 | Sleep < 6 hrs: -20
+      - Heart Rate < 60 bpm: +10 (optimal resting) | Heart Rate > 80 bpm: -10 (elevated strain)
+      - Steps between 8,000 and 12,000: +10 (ideal target zone)
+      - Steps < 4,000: -5 (sedentary day) | Steps > 16,000: -5 (overexertion)
     """
-    # Initialize the 'Recovery_Score' to 50 for everyone (neutral starting point)
+    df = df.copy()
     df['Recovery_Score'] = 50
 
-    # Adjust score based on Sleep_Hours
-    # Sleep more than 7 hours improves recovery score
-    df.loc[df['Sleep_Hours'] >= 7, 'Recovery_Score'] += 20
-    # Sleep less than 6 hours reduces recovery score
-    df.loc[df['Sleep_Hours'] < 6, 'Recovery_Score'] -= 20
+    # Adjust for Sleep Hours
+    if 'Sleep_Hours' in df.columns:
+        df.loc[df['Sleep_Hours'] >= 7.0, 'Recovery_Score'] += 20
+        df.loc[df['Sleep_Hours'] < 6.0, 'Recovery_Score'] -= 20
 
-    # Adjust score based on Heart_Rate_bpm
-    # Lower heart rates improve recovery score
-    df.loc[df['Heart_Rate_bpm'] < 60, 'Recovery_Score'] += 10  # Excellent
-    df.loc[df['Heart_Rate_bpm'] > 80, 'Recovery_Score'] -= 10  # Needs improvement
+    # Adjust for Heart Rate
+    if 'Heart_Rate_bpm' in df.columns:
+        df.loc[df['Heart_Rate_bpm'] < 60.0, 'Recovery_Score'] += 10
+        df.loc[df['Heart_Rate_bpm'] > 80.0, 'Recovery_Score'] -= 10
 
-    # Adjust score based on Steps
-    # Moderate steps improve score, too few or too many decrease score
-    df.loc[(df['Steps'] >= 8000) & (df['Steps'] <= 12000), 'Recovery_Score'] += 10  # Optimal steps
-    df.loc[df['Steps'] < 4000, 'Recovery_Score'] -= 5   # Too few steps
-    df.loc[df['Steps'] > 16000, 'Recovery_Score'] -= 5  # Possible overexertion
+    # Adjust for Steps
+    if 'Steps' in df.columns:
+        df.loc[(df['Steps'] >= 8000) & (df['Steps'] <= 12000), 'Recovery_Score'] += 10
+        df.loc[df['Steps'] < 4000, 'Recovery_Score'] -= 5
+        df.loc[df['Steps'] > 16000, 'Recovery_Score'] -= 5
 
-    # Ensure Recovery_Score stays within 0 to 100
+    # Clamp strictly between 0 and 100
     df['Recovery_Score'] = df['Recovery_Score'].clip(lower=0, upper=100)
 
     return df
+
+def process_data(file_path=None):
+    """
+    End-to-end data pipeline:
+    Loads raw CSV, imputes missing values, and computes Recovery_Score.
+    """
+    raw_df = load_data(file_path)
+    processed_df = calculate_recovery_score(raw_df)
+    return processed_df
